@@ -30,14 +30,12 @@ def makeImage(time):
             if x == 0:
                 lastPos = vectorCopy(pos)
             pygame.draw.line(win, (value,value,value,value), lastPos, pos)
-            
 
 image = pygame.image.load("D:\\python\\assets\\image3.jpg")
 
 winWidth = image.get_width()
 winHeight = image.get_height()
 win = pygame.display.set_mode((winWidth, winHeight))
-
 
 pygame.init()
 
