@@ -1,5 +1,6 @@
 
-import tkinter
+import tkinter, pygame
+from vector import *
 from tkinter.filedialog import askopenfile
 
 def browseFile():
@@ -11,3 +12,8 @@ def browseFile():
 
 def colorValue(color):
 	return color[0] * 0.3 + color[1] * 0.59 + color[2] * 0.11
+
+def loadAndResize(path, scale):
+	image = pygame.image.load(path)
+	image = pygame.transform.scale(image, (tup2vec(image.get_size())/scale).vec2tupint())
+	return image

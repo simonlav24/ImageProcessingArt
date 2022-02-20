@@ -1,10 +1,10 @@
 from math import fabs, sqrt, cos, sin, pi, floor, ceil
 from random import uniform, randint, choice
-import pygame
+import pygame, common
 from pygame import gfxdraw
 pygame.init()
 
-image = pygame.image.load("assets/image.jpg")
+image = common.loadAndResize("assets/image.jpg", 1)
 
 winWidth = image.get_width()
 winHeight = image.get_height()
@@ -40,9 +40,11 @@ while t < edge:
 	pygame.gfxdraw.filled_circle(result, point[0], point[1], radius, (0,0,0))
 	pygame.gfxdraw.aacircle(result, point[0], point[1], radius, (0,0,0))
 	
-	win.blit(result, (0,0)); pygame.display.update()
+	win.blit(result, (0,0))
+	pygame.display.update()
 
 	t += dt
+
 
 ################################################################################ Main Loop
 run = True
@@ -53,7 +55,8 @@ while run:
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_ESCAPE]:
 		run = False
-  
+	
+	run = False
 	pygame.display.update()
 	
 pygame.image.save(result, "spiral.jpg")

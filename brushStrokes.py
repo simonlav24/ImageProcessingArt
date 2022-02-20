@@ -1,30 +1,9 @@
 from math import fabs, sqrt, cos, sin, pi, floor, ceil, exp
 from random import uniform, randint, choice, gauss
-import pygame
+import pygame, argparse
 from pygame import gfxdraw
 from vector import *
 import common
-pygame.init()
-
-image = pygame.image.load("assets/housesMed.jpg")
-image = pygame.transform.scale(image, (tup2vec(image.get_size())/1).vec2tupint())
-
-winWidth = image.get_width()
-winHeight = image.get_height()
-win = pygame.display.set_mode((winWidth,winHeight))
-
-################################################################################ Classes
-
-counter = 0
-strokeWidth = 5#8
-strokeLen = 25
-maxStrokeWidth = 32
-bristleCount = 16#6
-bristleThickness = 3
-col = None
-mousePos = pygame.mouse.get_pos()
-
-win.fill((255,255,255))
 
 def drawMethod1():
 
@@ -60,17 +39,16 @@ def drawMethod1():
 		x4 += uniform(-strokeWidth, strokeWidth)
 		y4 += uniform(-strokeWidth, strokeWidth)
 
-def flow(pos):
-	
+def flow(pos, time = 0):
 	mag = 0.01 * uniform(0.95,1.05)
-	return Vector(sin(mag*pos[0]) + sin(mag*pos[1]), sin(mag*pos[0]) - sin(mag*pos[1]))
+	return Vector(sin(mag*pos[0] + time) + sin(mag*pos[1] + time), sin(mag*pos[0] + time) - sin(mag*pos[1] + time))
 	return Vector(sin(mag*pos[0]) + sin(mag*pos[1]), cos(mag*pos[0]) - cos(mag*pos[1]))
 
-def drawMethod2():
+def drawMethod2(time = 0):
 	# dir = vectorUnitRandom()
 	pos = Vector(randint(0, winWidth-1), randint(0,winHeight-1))
 	# dir *= strokeLen
-	dir = normalize(flow(pos)) * strokeLen * uniform(0.6, 1.4)
+	dir = normalize(flow(pos, time)) * strokeLen * uniform(0.6, 1.4)
 	
 	p1 = pos
 	p2 = pos + dir * 0.5
@@ -111,9 +89,41 @@ def alphaDown(color, alpha=64):
 	return (color[0], color[1], color[2], alpha)
 	
 ################################################################################ Setup
+# parse arguments
+parser = argparse.ArgumentParser(description='Brush Strokes')
+parser.add_argument('-i', '--image', type=str, default='assets/housesMed.jpg', help='image to use')
+args = parser.parse_args()
 
+pygame.init()
+
+image = pygame.image.load(args.image)
+image = pygame.transform.scale(image, (tup2vec(image.get_size())*0.5).vec2tupint())
+
+winWidth = image.get_width()
+winHeight = image.get_height()
+win = pygame.display.set_mode((winWidth,winHeight))
+
+counter = 0
+strokeWidth = 5#8
+strokeLen = 25
+maxStrokeWidth = 32
+bristleCount = 16#6
+bristleThickness = 3
+col = None
+mousePos = pygame.mouse.get_pos()
+
+win.fill((255,255,255))
 
 ################################################################################ Main Loop
+time = 0
+end = 30
+counter = 0
+saveFrames = False
+
+if saveFrames:
+	for i in range(30000):
+		drawMethod2(time)
+
 run = True
 while run:
 	for event in pygame.event.get():
@@ -123,11 +133,6 @@ while run:
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 			#mouse position:
 			mouse_pos = pygame.mouse.get_pos()
-			print("mouse pressed once")
-		if event.type == pygame.KEYDOWN:
-			#key pressed once:
-			if event.key == pygame.K_x:
-				print("pressed once")
 		if event.type == pygame.KEYDOWN and event.key == pygame.K_b:
 			filepath = common.browseFile()
 			if filepath:
@@ -141,8 +146,26 @@ while run:
 		run = False
 	
 	# draw:
-	for i in range(10):
-		drawMethod2()
+
+	if saveFrames:
+		for i in range(10000):
+			t = (time / end) * 2 * pi
+			drawMethod2(t)
+	
+		# counter with 3 leading zeros
+		num = str(counter).zfill(3)
+		pygame.image.save(win, "render/brushStrokes/frame" + num + ".png")
+		counter += 1
+		if counter > end:
+			run = False
+			break
+		time += 1
+	
+	else:
+		for i in range(100):
+			drawMethod2()
+
+	
 	
 	pygame.display.update()
 pygame.quit()
