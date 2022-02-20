@@ -14,7 +14,7 @@ mimicking a brush stroke and flow to create "van-gogh" style from an image
 
 ### 3D line effect
 
-<img src=".\results\3dLine.png" alt="3dLine" style="zoom:63%;" />
+<img src=".\results\3dline.gif" alt="3dLine" style="zoom:58%;" />
 
 ### Spiral line
 
