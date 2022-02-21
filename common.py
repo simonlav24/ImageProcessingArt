@@ -17,11 +17,3 @@ def loadAndResize(path, scale):
 	image = pygame.image.load(path)
 	image = pygame.transform.scale(image, (tup2vec(image.get_size())/scale).vec2tupint())
 	return image
-
-def loadFrames(path):
-	# load all frames of gif file into list of surfaces
-	frames = []
-	for file in glob.glob(path):
-		frames.append(pygame.image.load(file))
-	return frames
-	
