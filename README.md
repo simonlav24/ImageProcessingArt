@@ -19,3 +19,10 @@ mimicking a brush stroke and flow to create "van-gogh" style from an image
 ### Spiral line
 
 <img src=".\results\spiral.jpg" alt="spiral" style="zoom:54%;" />
+
+### Wavelength mapping
+
+mapping color value to wavelength of a sine
+
+<img src=".\results\sine.gif" alt="spiral" style="zoom:70%;" />
+

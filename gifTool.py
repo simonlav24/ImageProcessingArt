@@ -63,7 +63,7 @@ while True:
 	if event == sg.WIN_CLOSED or event == 'Cancel': # if user closes window or clicks cancel
 		break
 	
-	processEvents(event, values)		
+	processEvents(event, values)
 	window.Refresh()
 	
 window.close()
