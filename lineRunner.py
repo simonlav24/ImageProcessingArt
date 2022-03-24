@@ -1,91 +1,123 @@
 from math import fabs, sqrt, cos, sin, pi, floor, ceil
 from random import uniform, randint, choice
+from cv2 import threshold
 import pygame, os, argparse
+from pygame import gfxdraw
 from vector import *
+import common
 
+def smap(value,a,b,c,d,constrained=False):
+	res = (value - a)/(b - a) * (d - c) + c
+	if constrained:
+		if res > d:
+			return d
+		if res < c:
+			return c
+		return res
+	else:
+		return res
 
+def safeGetAt(pos, surf):
+	if pos[0] < 0 or pos[0] >= surf.get_width() or pos[1] < 0 or pos[1] >= surf.get_height():
+		return (0,0,0)
+	return surf.get_at(pos.vec2tupint())
 
-class LineRunner0:
-	def __init__(self):
-		self.pos = Vector(randint(0, winWidth-1), randint(0, winHeight-1))
-		self.prevPos = self.pos
-		self.target = Vector(randint(0, winWidth-1), randint(0, winHeight-1))
-
-		self.vel = vectorUnitRandom()
+class Vehicle:
+	def __init__(self, pos):
+		self.pos = vectorCopy(pos)
+		self.oldPos = vectorCopy(pos)
+		self.vel = Vector()
 		self.acc = Vector()
-		self.time = image.get_at(self.target)[0]
-
-	def changeTarget(self):
-		self.target = Vector(randint(0, winWidth-1), randint(0, winHeight-1))
-		self.time = image.get_at(self.target)[0] * 10
-
+		self.maxSpeed = 3
+		self.maxForce = 0.2
+		self.color = (255,255,255,10)
+	def applyForce(self, force):
+		self.acc = vectorCopy(force)
+	def flee(self, target):
+		return self.seek(target) * -1
+	def seek(self, target, arrival=False):
+		force = tup2vec(target) - self.pos
+		desiredSpeed = self.maxSpeed
+		if arrival:
+			slowRadius = 50
+			distance = force.getMag()
+			if (distance < slowRadius):
+				desiredSpeed = smap(distance, 0, slowRadius, 0, self.maxSpeed)
+				force.setMag(desiredSpeed)
+		force.setMag(desiredSpeed)
+		force -= self.vel
+		force.limit(self.maxForce)
+		return force
+	def pursue(self, targetVehicle):
+		target = targetVehicle.pos + targetVehicle.vel * 10
+		return self.seek(target)
+	def evade(self, targetVehicle):
+		return self.pursue(targetVehicle) * -1
+	def arrive(self, target):
+		return self.seek(target, True)
 	def step(self):
-		maxForce = 8
-		maxVel = 2.0
-
-		self.time -= 1
-		if self.time <= 0:
-			self.changeTarget()
-		
-		distance = dist(self.pos, self.target)
-		force = self.target - self.pos
-		force.normalize()
-		force *= 5/distance
-		force.limit(maxForce)
-
-		self.acc = force 
 		self.vel += self.acc
-		self.vel.limit(maxVel)
-		self.prevPos = self.pos
+		self.vel.limit(self.maxSpeed)
+		self.oldPos = vectorCopy(self.pos)
 		self.pos += self.vel
-
+	def wrapAround(self, square):
+		if self.pos.x >= square:
+			self.pos.x = -square
+		elif self.pos.x < -square:
+			self.pos.x = square
+		if self.pos.y >= square:
+			self.pos.y = -square
+		elif self.pos.y < -square:
+			self.pos.y = square
 	def draw(self):
-		value = 255 - int((self.vel.getMag() / 2.0) * 255)
-		pygame.draw.line(win, (value,value,value,value), self.prevPos, self.pos)
+		# draw line using gfx drfaw
+		gfxdraw.line(win, int(self.oldPos.x), int(self.oldPos.y), int(self.pos.x), int(self.pos.y), self.color)
 
-class LineRunner:
-	def __init__(self):
-		self.pos = Vector(randint(0, winWidth-1), randint(0, winHeight-1))
-		self.prevPos = self.pos
-		self.target = Vector(randint(0, winWidth-1), randint(0, winHeight-1))
+		# pygame.draw.line(win, self.color, self.oldPos, self.pos, 1)
+		# pygame.draw.circle(win, self.color, self.pos, 1)
 
-		self.vel = vectorUnitRandom()
-		self.acc = Vector()
-		self.time = image.get_at(self.target)[0] * 100
+def getTarget():
+	found = False
+	tries = 0
+	while not found:
+		tries += 1
+		found = True
+		target = lineRunner.pos + uniform(0, 100 + tries) * vectorUnitRandom()
+		if target.x < 0 or target.x >= win.get_width() or target.y < 0 or target.y >= win.get_height():
+			found = False
+			continue
 
-	def changeTarget(self):
-		self.target = Vector(randint(0, winWidth-1), randint(0, winHeight-1))
-		self.time = image.get_at(self.target)[0] * 100
+		color = image.get_at(target.vec2tupint())
+		value = common.colorValue(color)
+		if value <= 1:
+			found = False
+			continue
+	
+	radius = ((255 - value)/255) **2 * 60 + 1
+	# get random colors around the target
+	values = [common.colorValue(safeGetAt(target + radius * vectorUnitRandom(), image)) for i in range(50)]
+	# print(values)
+	# if there is a value that is far from the target value by epsilon reduce the radius
 
-	def seek(self, target):
-		global maxForce
-		global maxVel
-		# maxForce = 2
-		# maxVel = 0.1
+	epsilon = 50
+	for v in values:
+		if fabs(v - value) > epsilon:
+			radius /= 5
+			# print(2)
+			break
 
-		force = target - self.pos
-		force.normalize()
-		force *= 5/dist(self.pos, target)
-		force.limit(maxForce)
+	radius = max(radius, 1)
+	return target, value, radius
 
-		self.acc = force 
-		self.vel += self.acc
-		self.vel.limit(maxVel)
-		self.prevPos = self.pos
-		self.pos += self.vel
+def newTarget():
+	global target, targetTime
+	# random point
+	target, value, radius = getTarget()
+	targetTime = 100000
 
-	def step(self):
-		self.time -= 1
-		if self.time <= 0:
-			self.changeTarget()
-		
-		self.seek(self.target + vectorUnitRandom() * randint(0, 30))
+	pygame.draw.circle(image, (0,0,0), target.vec2tupint(), radius)
 
-	def draw(self):
-		value = 255 #- int((self.vel.getMag() / 2.0) * 255)
-		pygame.draw.line(win, (value,value,value,value), self.prevPos, self.pos)
-
-image = pygame.image.load("D:\\python\\assets\\simonSmaller.png")
+image = common.loadAndResize("D:\\python\\assets\\simon.jpg", 2)
 
 winWidth = image.get_width()
 winHeight = image.get_height()
@@ -93,13 +125,15 @@ win = pygame.display.set_mode((winWidth, winHeight))
 
 pygame.init()
 
-lineRunner = LineRunner()
+lineRunner = Vehicle(Vector(winWidth//2, winHeight//2))
 
-interval = 20
+interval = 1000
 time = 0
 
-maxForce = 2
-maxVel = 0.2
+target = Vector()
+targetTime = 0
+
+showImage = False
 
 run = True
 while run:
@@ -107,26 +141,29 @@ while run:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			run = False
-		if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
-			maxForce += 0.1
-			print(maxForce)
-		if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
-			maxForce -= 0.1
-			print(maxForce)
-		if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
-			maxVel += 0.001
-			print(maxVel)
-		if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:
-			maxVel -= 0.001
-			print(maxVel)
 		if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
 			pygame.image.save(win, 'resultLine.png')
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_ESCAPE]:
 		run = False
-		
+	
+	force = lineRunner.seek(target)
+	lineRunner.applyForce(force)
+
 	lineRunner.step()
+	
+	
+	targetTime -= 1
+	if targetTime <= 0:
+		newTarget()
+	if distus(lineRunner.pos, target) < 10:
+		newTarget()
+
 	lineRunner.draw()
+
+	if showImage:
+		smallImage = pygame.transform.scale(image, tup2vec(image.get_size()) / 8)
+		win.blit(smallImage, (0,0))
 
 	if time % interval == 0:
 		pygame.display.update()

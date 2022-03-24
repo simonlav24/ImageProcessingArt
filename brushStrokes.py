@@ -5,7 +5,7 @@ from pygame import gfxdraw
 from vector import *
 import common
 
-def drawMethod1():
+def drawBrushCurls():
 
 	x1 = randint(0, winWidth-1)
 	y1 = randint(0, winHeight-1)
@@ -44,7 +44,7 @@ def flow(pos, time = 0):
 	return Vector(sin(mag*pos[0] + time) + sin(mag*pos[1] + time), sin(mag*pos[0] + time) - sin(mag*pos[1] + time))
 	return Vector(sin(mag*pos[0]) + sin(mag*pos[1]), cos(mag*pos[0]) - cos(mag*pos[1]))
 
-def drawMethod2(time = 0):
+def drawBrushFlow(time = 0):
 	# dir = vectorUnitRandom()
 	pos = Vector(randint(0, winWidth-1), randint(0,winHeight-1))
 	# dir *= strokeLen
@@ -74,6 +74,23 @@ def drawMethod2(time = 0):
 	for i in range(bristleCount):
 		pygame.gfxdraw.bezier(win, [points1[i].vec2tupint(), points2[i].vec2tupint(), points3[i].vec2tupint()], 5, alphaDown(mutate(color, 50)))
 
+def drawLineFlow():
+	segmentLength = 5
+	point = Vector(randint(0, winWidth-1), randint(0,winHeight-1))
+	color = mutateValue(image.get_at(point.vec2tupint()), 20)
+
+	points = [point]
+	for i in range(8):
+		dir = normalize(flow(points[-1])) * segmentLength
+		p = points[-1] + dir
+		points.append(p)
+	pygame.draw.lines(win, color, False, points, 5)
+
+def hermit(p0, p1, p2, p3, t):
+	t2 = t * t
+	t3 = t2 * t
+	return (2*p1 - 2*p0 + t*(2*p0 - 5*p1 + 4*p2 - p3) + t2*(3*p1 - 5*p2 + p3)) * t3 + (3*p0 - 3*p1 + t*(-2*p0 + 3*p1 - p2 + p3)) * t2 + (-p0 + 3*p1 - 3*p2 + p3) * t + p1
+
 def clamp(x, lower, upper):
 	if x > upper:
 		x = upper
@@ -85,6 +102,33 @@ def mutate(col, amount = 10):
 	mr = amount
 	return (clamp(col[0] + randint(-mr, mr),0,255), clamp(col[1] + randint(-mr, mr),0,255), clamp(col[2] + randint(-mr, mr),0,255))
 
+def mutateValue(col, amount = 10):
+	hsvValues = common.rgb2hsv(col)
+	hue = hsvValues[0]
+	sat = hsvValues[1]
+	value = hsvValues[2]
+	value += randint(-amount, amount)
+	value = clamp(value, 0, 100)
+	return common.hsv2rgb((hue, sat, value))
+
+def mutateSaturation(col, amount = 10):
+	hsvValues = common.rgb2hsv(col)
+	hue = hsvValues[0]
+	sat = hsvValues[1]
+	value = hsvValues[2]
+	sat += randint(-amount, amount)
+	sat = clamp(sat, 0, 100)
+	return common.hsv2rgb((hue, sat, value))
+
+def mutateHue(col, amount = 10):
+	hsvValues = common.rgb2hsv(col)
+	hue = hsvValues[0]
+	sat = hsvValues[1]
+	value = hsvValues[2]
+	hue += randint(-amount, amount)
+	hue = clamp(hue, 0, 360)
+	return common.hsv2rgb((hue, sat, value))
+
 def alphaDown(color, alpha=64):
 	return (color[0], color[1], color[2], alpha)
 	
@@ -92,12 +136,13 @@ def alphaDown(color, alpha=64):
 # parse arguments
 parser = argparse.ArgumentParser(description='Brush Strokes')
 parser.add_argument('-i', '--image', type=str, default='assets/housesMed.jpg', help='image to use')
+parser.add_argument('-s', '--scale', type=float, default=1, help='scale image down')
 args = parser.parse_args()
 
 pygame.init()
 
 image = pygame.image.load(args.image)
-image = pygame.transform.scale(image, (tup2vec(image.get_size())*0.5).vec2tupint())
+image = pygame.transform.scale(image, (tup2vec(image.get_size()) * args.scale).vec2tupint())
 
 winWidth = image.get_width()
 winHeight = image.get_height()
@@ -121,8 +166,18 @@ counter = 0
 saveFrames = False
 
 if saveFrames:
-	for i in range(30000):
-		drawMethod2(time)
+	for i in range(10000):
+		t = (time / end) * 2 * pi
+		drawBrushFlow(t)
+
+		# counter with 3 leading zeros
+		num = str(counter).zfill(3)
+		pygame.image.save(win, "render/brushStrokes/frame" + num + ".png")
+		counter += 1
+		if counter > end:
+			run = False
+			break
+		time += 1
 
 run = True
 while run:
@@ -146,24 +201,8 @@ while run:
 		run = False
 	
 	# draw:
-
-	if saveFrames:
-		for i in range(10000):
-			t = (time / end) * 2 * pi
-			drawMethod2(t)
-	
-		# counter with 3 leading zeros
-		num = str(counter).zfill(3)
-		pygame.image.save(win, "render/brushStrokes/frame" + num + ".png")
-		counter += 1
-		if counter > end:
-			run = False
-			break
-		time += 1
-	
-	else:
-		for i in range(100):
-			drawMethod2()
+	for i in range(100):
+		drawLineFlow()
 
 	
 	
