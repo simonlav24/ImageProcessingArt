@@ -26,3 +26,8 @@ mapping color value to wavelength of a sine
 
 <img src=".\results\sine.gif" alt="spiral" style="zoom:70%;" />
 
+### wavy sine
+
+mapping color value to height of a sine
+
+<img src=".\results\wavy.png" alt="wavy" style="zoom:56%;" />
