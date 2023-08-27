@@ -1,24 +1,33 @@
 import glob, sys, os
 import PySimpleGUI as sg
 from PIL import Image
+import PIL
 import ast
 
 def make_gif(values, frame_folder, resize, crop, name, skip_frames):
-	frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.png")]
-	frames = [frames[i] for i in range(values['start_frame'], values['end_frame'], skip_frames)]
-	if resize != 1.0:
-		width, height = frames[0].size
-		for i in range(len(frames)):
-			frames[i] = frames[i].resize((int(width * resize), int(height * resize)), Image.NEAREST)
-			# frame.thumbnail((int(frame.size[0] * resize), int(frame.size[1] * resize)))
-	cropped = []
-	for frame in frames:
-		cropped.append(frame.crop((crop[0], crop[1], frame.size[0] - crop[2], frame.size[1] - crop[3])))
+    frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.png")]
+    if values['start_frame'] == values['end_frame']:
+        start_frame = 0
+        end_frame = len(frames) - 1
+    else:
+        start_frame = values['start_frame']
+        end_frame = values['end_frame']
+    frames = [frames[i] for i in range(start_frame, end_frame, skip_frames)]
+    if resize != 1.0:
+        width, height = frames[0].size
+        print(width, height)
+        for i in range(len(frames)):
+            frames[i] = frames[i].resize((int(width * resize), int(height * resize)), PIL.Image.LANCZOS)
+            # frame.thumbnail((int(frame.size[0] * resize), int(frame.size[1] * resize)))
+    print(frames)
+    cropped = []
+    for frame in frames:
+        cropped.append(frame.crop((crop[0], crop[1], frame.size[0] - crop[2], frame.size[1] - crop[3])))
 
-	frame_one = cropped[0]
-	frame_one.save(f"{name}.png")
-	frame_one.save("./results/" + name + ".gif", format="GIF", append_images=cropped[1:], save_all=True, duration=100, loop=0)
-	print("created Gif " + "./results/" + name + ".gif " + "frame count: ", len(frames))
+    frame_one = cropped[0]
+    frame_one.save(f"{name}.png")
+    frame_one.save("./results/" + name + ".gif", format="GIF", append_images=cropped[1:], save_all=True, duration=100, loop=0)
+    print("created Gif " + "./results/" + name + ".gif " + "frame count: ", len(frames))
 
 def unpackFrames(path):
 	im = Image.open(path)
